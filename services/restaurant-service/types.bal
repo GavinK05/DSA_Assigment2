@@ -17,6 +17,12 @@ public enum KitchenOrderStatus {
     REJECTED
 }
 
+// we use 'service cause service is a ballerina keyword so normal service wont work
+public type HealthResponse record {|
+    string status;
+    string 'service;
+|};
+
 // lat just shot for lattitude btw and lng is longitude cause them names too long
 public type RestaurantAddress record {|
     string street;
