@@ -52,7 +52,7 @@ Every member owns at least one service from start to finish: code, DB collection
 | **Gavin** (`GavinK05`) | **Order Service** + this contract (README, `contracts/`) | Order is the core. Every event goes through it |
 | Member 2 (`HeisLazi`) | **Restaurant Service** | Menus, stock, opening hours, kitchen queue |
 | Member 3 (`Amaru-Jay`) | **Delivery Service** | Drivers, assignment, pickup and drop-off |
-| Member 4 (`_____`) | **Payment Service** + **Notification Service** | Both are mostly Kafka consumers, so they're smaller |
+| Member 4 (`Ernst`) | **Payment Service** + **Notification Service** | Both are mostly Kafka consumers, so they're smaller |
 | Member 5 (`_____`) | **Customer Service** + **Admin Service** + **Docker Compose / infra** | Customer and Admin are read models. Infra is 20% of the marks |
 
 > 6+ members? Split off Notification, Admin and Docker as their own owners. Extra people then take a **bonus** (section 12).
