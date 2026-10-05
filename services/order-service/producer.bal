@@ -3,10 +3,10 @@ import ballerina/time;
 import ballerina/uuid;
 import ballerinax/kafka;
 
-# Shared Kafka producer. acks = all means Kafka confirms each write before we continue.
+# Kafka producer shared across the order-service. The producer is used to send events to Kafka, e.g. when an order is created or updated. The producer is configured in config.toml with the kafkaBootstrap value.
 final kafka:Producer producer = check new (kafkaBootstrap, {acks: kafka:ACKS_ALL});
 
-# Wraps data in the standard envelope and sends it. Key = orderId so one order's events stay in order.
+# wrap data in an envelope and send it.
 function publish(string topic, string orderId, json data) returns error? {
     EventEnvelope envelope = {
         eventId: "EVT-" + uuid:createType4AsString(), // type 4 UUID for unique event ID
