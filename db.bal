@@ -108,3 +108,37 @@ function addPending(PendingDelivery pending) returns error? {
     map<json> doc = check pending.toJson().ensureType();
     _= check pendingCol->updateOne({orderId: pending.orderId}, {set: doc}, {upsert: true});
 }
+
+# Removes and returns the oldest queued order, or nil if the queue is empty.
+function popOldestPending() returns PendingDelivery|error? {
+    mongodb:Collection pendingCol = check collection(PENDING);
+    foreach int attempt in 0 ..< 5 {
+        PendingDelivery? oldest = check pendingCol->findOne({}, {sort: {queuedAt: 1}}, {_id: 0});
+        if oldest is () {
+            return ();
+        }
+        mongodb:DeleteResult result = check pendingCol->deleteOne({orderId: oldest.orderId});
+        if result.deletedCount > 0 {
+            return oldest;
+        }
+        // Someone else popped it first, try the next one.
+    }
+    return ();
+}
+
+//----processed_events----
+
+
+# True if this eventId was alread handled.
+function isEventProcessed(string eventId) returns boolean|error{
+    mongodb:Collection processed = check collection(PROCESSED);
+    int count = check processed->countDocuments({eventId});
+    return count > 0;
+}
+
+#Records that this eventId was handled.
+function markEventProcessed(string eventId) returns error? {
+    mongodb:Collection processed = check collection(PROCESSED);
+    ProcessedEvent entry = {eventId, processedAt: nowUtc()};
+    check processed->insertOne(entry);
+}
