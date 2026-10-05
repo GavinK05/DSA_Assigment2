@@ -78,12 +78,67 @@ function updateDriverLocation(string driverId, Location location) returns boolea
 
 //----deliveries----
 
-#Inserts a delivery (fails if the order already has one).
+# Inserts a delivery (fails if the order already has one).
 function insertDelivery(Delivery delivery) returns error? {
     mongodb:Collection deliveries = check collection(DELIVERIES);
+    check deliveries->insertOne(delivery);
+}
+
+# Finds the delivery for an order.
+function findDeliveryByOrder(string orderId) returns Delivery|error? {
+    mongodb:Collection deliveries = check collection(DELIVERIES);
+    Delivery? delivery = check deliveries->findOne({orderId}, {}, {_id: 0});
+    return delivery;
+}
+
+# Saves status and timestamps, only if the stored status is still `expected`.
+function updateDelivery(Delivery delivery, DeliveryStatus expected) returns boolean|error {
+    mongodb:Collection deliveries = check collection(DELIVERIES);
     mongodb:UpdateResult result = check deliveries->updateOne(
-        {orderId: delivery.orderId, status: expected},
+            {orderId: delivery.orderId, status: expected},
             {set: {status: delivery.status, pickedUpAt: delivery.pickedUpAt, deliveredAt: delivery.deliveredAt}});
     return result.matchedCount > 0;
 }
 
+//--pending deliveries ---
+
+# Queues an order that has no driver yet (upsert, so a repeat doesn't duplicate it).
+function addPending(PendingDelivery pending) returns error? {
+    mongodb:Collection pendingCol = check collection(PENDING);
+    map<json> doc = check pending.toJson().ensureType();
+    _= check pendingCol->updateOne({orderId: pending.orderId}, {set: doc}, {upsert: true});
+}
+
+# Removes and returns the oldest queued order, or nil if the queue is empty.
+function popOldestPending() returns PendingDelivery|error? {
+    mongodb:Collection pendingCol = check collection(PENDING);
+    foreach int attempt in 0 ..< 5 {
+        PendingDelivery? oldest = check pendingCol->findOne({}, {sort: {queuedAt: 1}}, {_id: 0});
+        if oldest is () {
+            return ();
+        }
+        mongodb:DeleteResult result = check pendingCol->deleteOne({orderId: oldest.orderId});
+        if result.deletedCount > 0 {
+            return oldest;
+        }
+        // Someone else popped it first, try the next one.
+    }
+    return ();
+}
+
+//----processed_events----
+
+
+# True if this eventId was alread handled.
+function isEventProcessed(string eventId) returns boolean|error{
+    mongodb:Collection processed = check collection(PROCESSED);
+    int count = check processed->countDocuments({eventId});
+    return count > 0;
+}
+
+#Records that this eventId was handled.
+function markEventProcessed(string eventId) returns error? {
+    mongodb:Collection processed = check collection(PROCESSED);
+    ProcessedEvent entry = {eventId, processedAt: nowUtc()};
+    check processed->insertOne(entry);
+}
