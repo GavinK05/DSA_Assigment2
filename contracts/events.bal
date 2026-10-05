@@ -1,25 +1,26 @@
-# Wraps every Kafka message on every topic with a common envelope. This is useful for event sourcing and event-driven architectures. 
-public type EventEnvelope record {| 
-    string eventId; 
+# Wraps every Kafka message on every topic with a common envelope. This is useful for event sourcing and event-driven architectures.
+public type EventEnvelope record {|
+    string eventId;
     string eventType;
     int version;
-    string occurredAt; 
-    string 'source ;
-    string orderId; 
-    json data; 
+    string occurredAt;
+    string 'source;
+    string orderId;
+    json data;
 |};
 
-# Delivery address, used by orders.created and orders.status-changed.
+# Delivery address, used by orders.created and orders.status-changed events.
 public type Address record {|
     string street;
     string suburb;
     string city;
-    float lat;
+    float lat; // coordinates for the delivery address.
     float lng;
 |};
 
-# Every status an order can be in (README 4.3).
-public enum OrderStatus {
+# Order status found in README.md documentation, section 4.3.
+public enum OrderStatus { // enum is a "fixed list of allowed values."
+    // Only the 7 valid states from the state machine can exist, so an invalid status is a compile error, not a runtime error.
     CREATED,
     CONFIRMED,
     PREPARING,
@@ -29,10 +30,10 @@ public enum OrderStatus {
     CANCELLED
 }
 
-# Extra restaurant status (PREPARING and READY already exist above).
+# Extra constant for the restaurant status (PREPARING and READY already exist above).
 public const REJECTED = "REJECTED";
 
-# Status the restaurant reports in restaurant.order-updated.
+# Status the restaurant reports in restaurant.order-updated events.
 public type RestaurantStatus PREPARING|READY|REJECTED;
 
 # One item in a new order (no price yet).
@@ -63,26 +64,26 @@ public type OrderStatusChangedData record {|
     string restaurantId;
     OrderStatus fromStatus;
     OrderStatus toStatus;
-    string reason; // reason for the status change, e.g. "Kitchen marked ready"
+    string reason; // reason for the status change, e.g. "restaurant rejected the order"
     decimal total;
     Address deliveryAddress;
-|};
-
-# Data for the restaurant.order-validated event.
-public type OrderValidatedData record {|
-    string restaurantId;
-    string customerId;
-    boolean accepted;
-    string reason;
-    PricedItem[] items;
-    decimal total;
-    string currency;
 |};
 
 # Data for the restaurant.order-updated event.
 public type RestaurantOrderUpdatedData record {|
     string restaurantId;
     RestaurantStatus status;
+|};
+
+# Data for the restaurant.order-validated event.
+public type OrderValidatedData record {|
+    string restaurantId;
+    string customerId;
+    PricedItem[] items;
+    decimal total;
+    string currency;
+    string reason; // reason for the validation result, e.g. "OUT_OF_STOCK: ITM-..." (empty if accepted)
+    boolean accepted; // true if the order is accepted, false if rejected.
 |};
 
 # Data for the payments.completed event.
