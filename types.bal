@@ -67,7 +67,7 @@ type ProcessedEvent record {|
 //----HTTP request / response bodies----
 type NewDriver record {|
     string name;
-    string phone 
+    string phone;
     string vehicle;
 |};
 
