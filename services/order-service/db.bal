@@ -56,5 +56,5 @@ function setFields(string orderId, map<json> fields) returns error? {
 # Marks event as handled, skipping it in future duplicate checks. This is called after the event has been processed successfully.
 function markEventProcessed(string eventId) returns error? {
     mongodb:Collection col = check eventsCol();
-    _ = check col->insertOne({eventId: eventId, processedAt: time:utcToString(time:utcNow())});
+    _ = check col->insertOne({"eventId": eventId, "processedAt": time:utcToString(time:utcNow())});
 }
