@@ -25,7 +25,7 @@ function findOrder(string orderId) returns Order?|error {
 #Update an order.
 function updateStatus(string orderId, OrderStatus s, StatusEntry entry, string now) returns error? {
     mongodb:Collection col = check ordersCol();
-    _ = check col->updateOne({orderId:orderId}, {set: {status: s, updatedAt: now}, "$push": {statusHistory: entry.toJson()}});
+    _ = check col->updateOne({orderId:orderId}, {set: {status: s, updatedAt: now}, "push": {statusHistory: entry.toJson()}});
 }
 
 # Returns the processed_events collection for duplicate checking. 
