@@ -55,17 +55,6 @@ public function changeStatus(string orderId, OrderStatus next, string reason) re
 }
 
 
-public function createOrder(NewOrderRequest req) returns Order|error {
-
-    If req.items.length() == 0 {
-        return error("Order must have at least one item.");
-    }
-
-    string now = time:utcToString(time:utcNow());
-    string orderId = "ORD-" + uuid:createType4AsString();
-
-    OrderLine[] lines = from OrderItem i in req.items select {itemId: i.itemId, quantity: i.quantity};
-
 # Creates a new order in CREATED status and saves it to MongoDB.
 public function createOrder(NewOrderRequest req) returns Order|error {
     if req.items.length() == 0 {
@@ -94,5 +83,4 @@ public function createOrder(NewOrderRequest req) returns Order|error {
     check insertOrder(o);
     // TODO Stage 7: publishOrderCreated(o);
     return o;
-}
 }
