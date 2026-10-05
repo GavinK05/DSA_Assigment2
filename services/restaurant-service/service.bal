@@ -44,4 +44,57 @@ service / on httpListener {
         response.setPayload(result);
         return response;
     }
+
+    // The [string restaurantId] part reads the ID from the URL.
+    // This is similar to Flask's /restaurants/<restaurant_id> route.
+    resource function get restaurants/[string restaurantId]() returns http:Response {
+        Restaurant|error result = findRestaurant(restaurantId);
+
+        if result is error {
+            http:Response response = new;
+            ErrorResponse errorResponse;
+            if result.message() == "NOT_FOUND" {
+                response.statusCode = 404;
+                errorResponse = {
+                    'error: "NOT_FOUND",
+                    message: "Restaurant " + restaurantId + " does not exist"
+                };
+            } else {
+                response.statusCode = 500;
+                errorResponse = {
+                    'error: "DATABASE_ERROR",
+                    message: result.message()
+                };
+            }
+            response.setPayload(errorResponse);
+            return response;
+        }
+
+        http:Response response = new;
+        response.statusCode = 200;
+        response.setPayload(result);
+        return response;
+    }
+
+    // This first version returns every restaurant.
+    // The openNow filter will be added after the opening-hours logic exists.
+    resource function get restaurants() returns http:Response {
+        Restaurant[]|error result = findRestaurants();
+
+        if result is error {
+            http:Response response = new;
+            response.statusCode = 500;
+            ErrorResponse errorResponse = {
+                'error: "DATABASE_ERROR",
+                message: result.message()
+            };
+            response.setPayload(errorResponse);
+            return response;
+        }
+
+        http:Response response = new;
+        response.statusCode = 200;
+        response.setPayload(result);
+        return response;
+    }
 }
