@@ -78,12 +78,33 @@ function updateDriverLocation(string driverId, Location location) returns boolea
 
 //----deliveries----
 
-#Inserts a delivery (fails if the order already has one).
+# Inserts a delivery (fails if the order already has one).
 function insertDelivery(Delivery delivery) returns error? {
     mongodb:Collection deliveries = check collection(DELIVERIES);
+    check deliveries->insertOne(delivery);
+}
+
+# Finds the delivery for an order.
+function findDeliveryByOrder(string orderId) returns Delivery|error? {
+    mongodb:Collection deliveries = check collection(DELIVERIES);
+    Delivery? delivery = check deliveries->findOne({orderId}, {}, {_id: 0});
+    return delivery;
+}
+
+# Saves status and timestamps, only if the stored status is still `expected`.
+function updateDelivery(Delivery delivery, DeliveryStatus expected) returns boolean|error {
+    mongodb:Collection deliveries = check collection(DELIVERIES);
     mongodb:UpdateResult result = check deliveries->updateOne(
-        {orderId: delivery.orderId, status: expected},
+            {orderId: delivery.orderId, status: expected},
             {set: {status: delivery.status, pickedUpAt: delivery.pickedUpAt, deliveredAt: delivery.deliveredAt}});
     return result.matchedCount > 0;
 }
 
+//--pending deliveries ---
+
+# Queues an order that has no driver yet (upsert, so a repeat doesn't duplicate it).
+function addPending(PendingDelivery pending) returns error? {
+    mongodb:Collection pendingCol = check collection(PENDING);
+    map<json> doc = check pending.toJson().ensureType();
+    _= check pendingCol->updateOne({orderId: pending.orderId}, {set: doc}, {upsert: true});
+}
