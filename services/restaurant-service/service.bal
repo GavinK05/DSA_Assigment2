@@ -76,9 +76,9 @@ service / on httpListener {
         return response;
     }
 
-    // This first version returns every restaurant.
-    // The openNow filter will be added after the opening-hours logic exists.
-    resource function get restaurants() returns http:Response {
+    // Without openNow this returns every restaurant.
+    // openNow=true keeps only restaurants accepted by isOpenNow.
+    resource function get restaurants(@http:Query string? openNow) returns http:Response {
         Restaurant[]|error result = findRestaurants();
 
         if result is error {
@@ -88,6 +88,49 @@ service / on httpListener {
                 'error: "DATABASE_ERROR",
                 message: result.message()
             };
+            response.setPayload(errorResponse);
+            return response;
+        }
+
+        Restaurant[] restaurants = result;
+        if openNow is string && openNow == "true" {
+            Restaurant[] openRestaurants = [];
+            foreach Restaurant restaurant in restaurants {
+                if isOpenNow(restaurant.openingHours) {
+                    openRestaurants.push(restaurant);
+                }
+            }
+            restaurants = openRestaurants;
+        }
+
+        http:Response response = new;
+        response.statusCode = 200;
+        response.setPayload(restaurants);
+        return response;
+    }
+
+    //
+    resource function put restaurants/[string restaurantId]/hours(
+            @http:Payload OpeningHours[] openingHours
+    ) returns http:Response {
+        Restaurant|error result = updateHours(restaurantId, openingHours);
+
+        if result is error {
+            http:Response response = new;
+            ErrorResponse errorResponse;
+            if result.message() == "NOT_FOUND" {
+                response.statusCode = 404;
+                errorResponse = {
+                    'error: "NOT_FOUND",
+                    message: "Restaurant " + restaurantId + " does not exist"
+                };
+            } else {
+                response.statusCode = 500;
+                errorResponse = {
+                    'error: "DATABASE_ERROR",
+                    message: result.message()
+                };
+            }
             response.setPayload(errorResponse);
             return response;
         }

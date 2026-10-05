@@ -86,3 +86,23 @@ public function findRestaurants() returns Restaurant[]|error {
     return restaurants;
 }
 
+//update and mongoDb syntax is whylling kauh. like why do we use the keyword to update but then add the dict after?? like
+// we cant inline it
+public function updateHours(string restaurantId, OpeningHours[] openingHours) returns Restaurant|error {
+    if restaurantsCollection is () {
+        return error("Restaurant collection is not initialized");
+    }
+    mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
+    mongodb:Update update = {set: {openingHours: openingHours}};
+    var updateResult = collectionValue->updateOne(
+        {restaurantId: restaurantId},
+        update,
+        {}
+    );
+
+    if updateResult is error {
+        return updateResult;
+    }
+    return findRestaurant(restaurantId);
+}
+
