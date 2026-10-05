@@ -1,0 +1,173 @@
+# One command starts everything: docker compose up --build
+# Infra only (develop a service with `bal run`): docker compose up kafka kafka-init mongo kafka-ui
+
+x-service: &service-defaults
+  restart: on-failure
+  networks: [fooddelivery-net]
+  depends_on:
+    kafka-init:
+      condition: service_completed_successfully
+    mongo:
+      condition: service_healthy
+
+services:
+  kafka:
+    image: apache/kafka:3.9.0
+    container_name: kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENERS: INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:29092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 15s
+    networks: [fooddelivery-net]
+
+  kafka-init:
+    image: apache/kafka:3.9.0
+    container_name: kafka-init
+    restart: "no"
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./infra/kafka/create-topics.sh:/create-topics.sh:ro
+    entrypoint: ["/bin/bash", "/create-topics.sh"]
+    networks: [fooddelivery-net]
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval 'db.adminCommand(\"ping\").ok' | grep -q 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks: [fooddelivery-net]
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: fooddelivery
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      kafka-init:
+        condition: service_completed_successfully
+    networks: [fooddelivery-net]
+
+  customer-service:
+    <<: *service-defaults
+    build: ./services/customer-service
+    container_name: customer-service
+    ports: ["8081:8081"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8081/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  restaurant-service:
+    <<: *service-defaults
+    build: ./services/restaurant-service
+    container_name: restaurant-service
+    ports: ["8082:8082"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8082/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  order-service:
+    <<: *service-defaults
+    build: ./services/order-service
+    container_name: order-service
+    ports: ["8083:8083"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8083/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  payment-service:
+    <<: *service-defaults
+    build: ./services/payment-service
+    container_name: payment-service
+    ports: ["8084:8084"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8084/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  delivery-service:
+    <<: *service-defaults
+    build: ./services/delivery-service
+    container_name: delivery-service
+    ports: ["8085:8085"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8085/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  notification-service:
+    <<: *service-defaults
+    build: ./services/notification-service
+    container_name: notification-service
+    ports: ["8086:8086"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8086/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  admin-service:
+    <<: *service-defaults
+    build: ./services/admin-service
+    container_name: admin-service
+    ports: ["8087:8087"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8087/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+networks:
+  fooddelivery-net:
+    name: fooddelivery-net
+
+volumes:
+  mongo-data:
