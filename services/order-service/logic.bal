@@ -50,7 +50,7 @@ public function changeStatus(string orderId, OrderStatus next, string reason) re
     o.updatedAt = now;
     o.statusHistory.push(entry);
 
-    // TODO Stage 7: publishStatusChanged(o, previous, reason);
+    check publishStatusChanged(o, previous, reason);
     return o;
 }
 
@@ -81,6 +81,6 @@ public function createOrder(NewOrderRequest req) returns Order|error {
     };
 
     check insertOrder(o);
-    // TODO Stage 7: publishOrderCreated(o);
+    check publishOrderCreated(o);
     return o;
 }
