@@ -175,7 +175,8 @@ public function handleOrderStatusChanged(EventEnvelope envelope) returns error? 
             }
             return orderResult;
         }
-        if orderResult.status != "CANCELLED" && orderResult.status != "REJECTED" {
+        // A rejected kitchen order can still have reserved stock from validation.
+        if orderResult.status != "CANCELLED" {
             foreach KitchenOrderItem item in orderResult.items {
                 check releaseStock(data.restaurantId, item.itemId, item.quantity);
             }
