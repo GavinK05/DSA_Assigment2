@@ -160,3 +160,9 @@ public type ErrorBody record {|
     string 'error;
     string message;
 |};
+
+# Result returned by the simulated payment check.
+public type PaymentDecision record {|
+    PaymentStatus status;
+    string reason;
+|};
