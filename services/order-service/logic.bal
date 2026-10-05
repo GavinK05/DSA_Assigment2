@@ -1,4 +1,5 @@
 import ballerina/time;
+import ballerina/uuid;
 
 # True if the state machine allows moving from current to next (README section 4.3).
 public function isValidTransition(OrderStatus current, OrderStatus next) returns boolean {
@@ -51,4 +52,47 @@ public function changeStatus(string orderId, OrderStatus next, string reason) re
 
     // TODO Stage 7: publishStatusChanged(o, previous, reason);
     return o;
+}
+
+
+public function createOrder(NewOrderRequest req) returns Order|error {
+
+    If req.items.length() == 0 {
+        return error("Order must have at least one item.");
+    }
+
+    string now = time:utcToString(time:utcNow());
+    string orderId = "ORD-" + uuid:createType4AsString();
+
+    OrderLine[] lines = from OrderItem i in req.items select {itemId: i.itemId, quantity: i.quantity};
+
+# Creates a new order in CREATED status and saves it to MongoDB.
+public function createOrder(NewOrderRequest req) returns Order|error {
+    if req.items.length() == 0 {
+        return error("Order must have at least one item.");
+    }
+
+    string now = time:utcToString(time:utcNow());
+    string orderId = "ORD-" + uuid:createType4AsString();
+
+    OrderLine[] lines = from OrderItem i in req.items select {itemId: i.itemId, quantity: i.quantity};
+
+    Order o = {
+        orderId: orderId,
+        customerId: req.customerId,
+        restaurantId: req.restaurantId,
+        items: lines,
+        deliveryAddress: req.deliveryAddress,
+        total: 0d,
+        currency: "NAD",
+        status: CREATED,
+        statusHistory: [{status: CREATED, at: now, reason: "Order created"}],
+        createdAt: now,
+        updatedAt: now
+    };
+
+    check insertOrder(o);
+    // TODO Stage 7: publishOrderCreated(o);
+    return o;
+}
 }
