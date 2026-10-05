@@ -1,6 +1,6 @@
-const string TOPIC_ORDER_STATUS_CHANGED = "order_status_changed";
-const string TOPIC_DELIVERY_ASSIGNED = "delivery assigned";
-const string TOPIC_DELIVERY_PICKED_UP = "delivery.picked_up";
+const string TOPIC_ORDER_STATUS_CHANGED = "orders.status-changed";
+const string TOPIC_DELIVERY_ASSIGNED = "delivery.assigned";
+const string TOPIC_DELIVERY_PICKED_UP = "delivery.picked-up";
 const string TOPIC_DELIVERY_COMPLETED = "delivery.completed";
 
 // -----Enums-----
@@ -42,7 +42,7 @@ string deliveryId;
 string orderId;
 string driverId;
 string customerId;
-string resturauntId;
+string restaurantId;
 DeliveryAddress deliveryAddress;
 DeliveryStatus status;
 string assignedAt;
@@ -75,7 +75,7 @@ type DriverStatusUpdate record {|
     DriverStatus status;
 |};
 
-type LocationUdate record {|
+type LocationUpdate record {|
     float lat;
     float lng;
 |};
@@ -88,7 +88,7 @@ type ErrorBody record {|
     string eventId;
     string eventType;
     int version;
-    string occuredAt;
+    string occurredAt;
     string 'source;
     string orderId;
     json data;
@@ -104,26 +104,27 @@ type DeliveryAddress record {|
 
     type OrderStatusChangedData record {|
     string customerId;
-    string resturantId;
-    string fromStaus;
+    string restaurantId;
+    string fromStatus;
     string toStatus;
     string reason;
     decimal total;
     DeliveryAddress deliveryAddress;
     |};
 
-    type DeliverAssignedData record {|
+    type DeliveryAssignedData record {|
     string deliveryId;
     string driverId;
+    string driverName;
     string customerId;
-    string pickedUpAt;
+    string restaurantId;
     |};
 
     type DeliveryPickedUpData record {|
     string deliveryId;
     string driverId;
-    string driverName;
     string customerId;
+    string pickedUpAt;
     |};
 
     type DeliveryCompletedData record {|

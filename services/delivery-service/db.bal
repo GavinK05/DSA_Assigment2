@@ -2,7 +2,7 @@ import ballerinax/mongodb;
 
 const string DRIVERS = "drivers";
 const string DELIVERIES = "deliveries";
-const string PENDING_DELIVERIES = "pending_deliveries";
+const string PENDING ="pending_deliveries";
 const string PROCESSED = "processed_events";
 
 final mongodb:Client mongoClient = check new ({connection: mongoUrl});
@@ -57,15 +57,15 @@ function findAvailableDriver() returns Driver|error? {
 
 # Sets a driver's status. If 'expected' is given only updates when the current status matches
 # (this is what stops two order grabbing the same driver). Retruns true if a driverwas updated.
-function uupdateDriverStatus(string driverId, DriverStatus newStatus, DriverStatus? expected = ())
+function updateDriverStatus(string driverId, DriverStatus newStatus, DriverStatus? expected = ())
 returns boolean|error {
-    mangodb:Collection drivers = check collection(DRIVERS);
+    mongodb:Collection drivers = check collection(DRIVERS);
     map<json> filter = {driverId};
     if expected is DriverStatus {
         filter["status"] = expected;
     }
     mongodb:UpdateResult result = check drivers->updateOne(filter,
-        {set:{status: newStatus, updateAt: nowUtc()}});
+        {set:{status: newStatus, updatedAt: nowUtc()}});
     return result.matchedCount > 0;
 }
 # Saves a driver's location. Returns false if the driver doesn't exist.
