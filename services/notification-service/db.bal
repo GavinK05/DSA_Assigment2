@@ -54,3 +54,30 @@ function saveProcessedEvent(ProcessedEvent processedEvent)
 
     check col->insertOne(processedEvent);
 }
+
+function findNotifications(string? recipientId, string? orderId)
+        returns Notification[]|error {
+
+    mongodb:Collection col = check notificationsCol();
+
+    map<json> filter = {};
+
+    if recipientId is string {
+        filter["recipientId"] = recipientId;
+    }
+
+    if orderId is string {
+        filter["orderId"] = orderId;
+    }
+
+    stream<Notification, error?> notificationStream =
+        check col->find(filter, targetType = Notification);
+
+    Notification[] notifications =
+        check from Notification notification in notificationStream
+        select notification;
+
+    check notificationStream.close();
+
+    return notifications;
+}
