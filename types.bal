@@ -112,4 +112,26 @@ type DeliveryAddress record {|
     DeliveryAddress deliveryAddress;
     |};
 
-    type Deliver
+    type DeliverAssignedData record {|
+    string deliveryId;
+    string driverId;
+    string customerId;
+    string pickedUpAt;
+    |};
+
+    type DeliveryPickedUpData record {|
+    string deliveryId;
+    string driverId;
+    string driverName;
+    string customerId;
+    |};
+
+    type DeliveryCompletedData record {|
+    string deliveryId;
+    string driverId;
+    string customerId;
+    string restaurantId;
+    string deliveredAt;
+    int durationMinutes;
+    |};
+
