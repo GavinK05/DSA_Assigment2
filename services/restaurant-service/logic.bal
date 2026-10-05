@@ -53,7 +53,7 @@ function validateRestaurant(RestaurantCreateRequest request) returns error? {
     }
 }
 
-// i just keep the menu checks here so all the menu routes use the same rules.
+// we keep the menu checks here so all the menu routes use the same rules.
 // no negative prices or stock, and the name cannot just be blank.
 function validateMenuItem(MenuItem menuItem) returns error? {
     if menuItem.name == "" {
@@ -66,6 +66,80 @@ function validateMenuItem(MenuItem menuItem) returns error? {
     if menuItem.stock < 0 {
         return error("Menu item stock cannot be negative");
     }
+}
+
+// restaurantId and requestedItems come from the order request/event.
+// we read the restaurant from MongoDB so the customer cannot send their own price.
+// the total is exact decimal addition in NAD, with no extra rounding added.
+public function validateAndPriceOrder(string restaurantId, OrderItemRequest[] requestedItems) returns OrderValidationResult|error {
+    // this gets the current restaurant record from the restaurants collection.
+    Restaurant|error restaurantResult = findRestaurant(restaurantId);
+    if restaurantResult is error {
+        return restaurantResult;
+    }
+    Restaurant restaurant = restaurantResult;
+    KitchenOrderItem[] pricedItems = [];
+    decimal total = 0;
+    // we use this to stop the same item being requested twice in one order.
+    string[] seenItemIds = [];
+
+    // requestedItem comes from the order, while menuItem comes from MongoDB.
+    foreach OrderItemRequest requestedItem in requestedItems {
+        if requestedItem.quantity <= 0 {
+            return rejectedOrder("INVALID_QUANTITY");
+        }
+        foreach string seenItemId in seenItemIds {
+            if seenItemId == requestedItem.itemId {
+                return rejectedOrder("DUPLICATE_ITEM");
+            }
+        }
+        seenItemIds.push(requestedItem.itemId);
+
+        boolean itemFound = false;
+        foreach MenuItem menuItem in restaurant.menu {
+            if menuItem.itemId != requestedItem.itemId {
+                continue;
+            }
+            itemFound = true;
+            if !menuItem.available {
+                return rejectedOrder("ITEM_UNAVAILABLE: " + requestedItem.itemId);
+            }
+            if menuItem.stock < requestedItem.quantity {
+                return rejectedOrder("OUT_OF_STOCK: " + requestedItem.itemId);
+            }
+            // this record is the priced item we can pass to the next service.
+            pricedItems.push({
+                itemId: menuItem.itemId,
+                name: menuItem.name,
+                quantity: requestedItem.quantity,
+                unitPrice: menuItem.price
+            });
+            total += menuItem.price * requestedItem.quantity;
+        }
+        if !itemFound {
+            return rejectedOrder("ITEM_NOT_FOUND: " + requestedItem.itemId);
+        }
+    }
+
+    // if we reach here, every item passed, so we return the final priced order data.
+    return {
+        accepted: true,
+        reason: "",
+        items: pricedItems,
+        total: total,
+        currency: "NAD"
+    };
+}
+
+function rejectedOrder(string reason) returns OrderValidationResult {
+    // rejected orders do not send any priced items or a usable total.
+    return {
+        accepted: false,
+        reason: reason,
+        items: [],
+        total: 0,
+        currency: "NAD"
+    };
 }
 
 // a restaurant is open from its opening time up to, but not including, its closing time.

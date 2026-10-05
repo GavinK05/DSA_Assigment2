@@ -1,15 +1,15 @@
 import ballerinax/mongodb;
 
-// These handles are created once during module initialization.
-// idk i was told we need em (this my first time using mongodb lol)
+// these are the MongoDB handles we keep so we can reuse the same connection.
+// mongodb:Database means this variable is a MongoDB database object, not our restaurant data.
 mongodb:Client? mongoClient = ();
 mongodb:Database? restaurantDatabase = ();
 mongodb:Collection? restaurantsCollection = ();
 
-// init() runs before the service starts and is used to set up the mongoDB client, database, and collection
-// in short just sets up the connection to the database and collection so we can use it later
-// ngl to you the value assignment syntax in bal sucks  so instead of
-// mongoClient = new ({connection: mongoUrl}); we have to do this weird check with the :
+// init() runs before the service starts and sets up the client, database, and collection.
+// mongodb:Client, mongodb:Database, and mongodb:Collection are connector types we use later.
+// the -> means we are calling a remote MongoDB function, kinda like calling a method on a Python client.
+// check passes the connection error up if MongoDB is not running.
 function init() returns error? {
     mongoClient = check new ({connection: mongoUrl});
     if mongoClient is () {
@@ -86,14 +86,15 @@ public function findRestaurants() returns Restaurant[]|error {
     return restaurants;
 }
 
-//update and mongoDb syntax is whylling kauh. like why do we use the keyword to update but then add the dict after?? like
-// we cant inline it
+// MongoDB update syntax is kinda weird here because Update is its own record.
+// set tells MongoDB which fields to replace, and the map after it tells it the new values.
 public function updateHours(string restaurantId, OpeningHours[] openingHours) returns Restaurant|error {
     if restaurantsCollection is () {
         return error("Restaurant collection is not initialized");
     }
     mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
     mongodb:Update update = {set: {openingHours: openingHours}};
+    // updateOne finds the restaurant by ID and writes the new hours to MongoDB.
     var updateResult = collectionValue->updateOne(
         {restaurantId: restaurantId},
         update,
@@ -170,13 +171,17 @@ public function removeMenuItem(string restaurantId, string itemId) returns Resta
     return saveMenu(restaurantId, updatedMenu);
 }
 
-// this is the repeated MongoDB update part for all three menu operations.
+// we keep the repeated MongoDB menu update part in one function for all three menu operations.
+// menu comes from the restaurant record, and the saved result goes back to MongoDB.
 function saveMenu(string restaurantId, MenuItem[] menu) returns Restaurant|error {
     if restaurantsCollection is () {
         return error("Restaurant collection is not initialized");
     }
+    // mongodb:Collection is the MongoDB collection object, not the menu list itself.
     mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
+    // set tells MongoDB which fields we want to replace.
     mongodb:Update update = {set: {menu: menu}};
+    // updateOne finds the restaurant by ID and writes the new menu to MongoDB.
     var updateResult = collectionValue->updateOne(
         {restaurantId: restaurantId},
         update,
@@ -187,5 +192,68 @@ function saveMenu(string restaurantId, MenuItem[] menu) returns Restaurant|error
         return updateResult;
     }
     return findRestaurant(restaurantId);
+}
+
+// quantity comes from the order, and the current stock comes from MongoDB.
+// $gte means stock must be greater than or equal to quantity before we update it.
+// $inc then subtracts the quantity, so MongoDB does the check and subtraction together.
+public function reserveStock(string restaurantId, string itemId, int quantity) returns error? {
+    if quantity <= 0 {
+        return error("INVALID_QUANTITY");
+    }
+    if restaurantsCollection is () {
+        return error("Restaurant collection is not initialized");
+    }
+    mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
+    mongodb:Update update = {inc: {"menu.$.stock": -quantity}};
+    var updateResult = collectionValue->updateOne(
+        {restaurantId: restaurantId, "menu.itemId": itemId, "menu.stock": {"$gte": quantity}},
+        update,
+        {}
+    );
+
+    if updateResult is error {
+        return updateResult;
+    }
+    // matchedCount tells us if MongoDB found an item with enough stock to reserve.
+    if updateResult.matchedCount > 0 {
+        return ();
+    }
+
+    Restaurant|error restaurantResult = findRestaurant(restaurantId);
+    if restaurantResult is error {
+        return restaurantResult;
+    }
+    foreach MenuItem menuItem in restaurantResult.menu {
+        if menuItem.itemId == itemId {
+            return error("OUT_OF_STOCK");
+        }
+    }
+    return error("ITEM_NOT_FOUND");
+}
+
+public function releaseStock(string restaurantId, string itemId, int quantity) returns error? {
+    if quantity <= 0 {
+        return error("INVALID_QUANTITY");
+    }
+    if restaurantsCollection is () {
+        return error("Restaurant collection is not initialized");
+    }
+    // this adds stock back when an earlier reservation needs to be cancelled.
+    mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
+    mongodb:Update update = {inc: {"menu.$.stock": quantity}};
+    var updateResult = collectionValue->updateOne(
+        {restaurantId: restaurantId, "menu.itemId": itemId},
+        update,
+        {}
+    );
+
+    if updateResult is error {
+        return updateResult;
+    }
+    if updateResult.matchedCount == 0 {
+        return error("ITEM_NOT_FOUND");
+    }
+    return ();
 }
 

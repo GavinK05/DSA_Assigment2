@@ -49,6 +49,19 @@ public type MenuItem record {|
     boolean available;
 |};
 
+public type OrderItemRequest record {|
+    string itemId;
+    int quantity;
+|};
+
+public type OrderValidationResult record {|
+    boolean accepted;
+    string reason;
+    KitchenOrderItem[] items;
+    decimal total;
+    string currency;
+|};
+
 // ok quick explainer cause this lwk confusing
 // so why address isnt a list also is cause we only use one record of the address cause a resturant only has one location mos
 // but we can have many opening hours and menu items so those are lists

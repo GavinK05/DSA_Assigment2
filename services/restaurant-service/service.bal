@@ -173,7 +173,7 @@ service / on httpListener {
 
 }
 
-// i use one response helper so all the menu routes return errors the same way.
+// we use one response helper so all the menu routes return errors the same way.
 function menuResultResponse(Restaurant|error result, string restaurantId, string itemId, int successStatus) returns http:Response {
     if result is error {
         if result.message() == "NOT_FOUND" {
