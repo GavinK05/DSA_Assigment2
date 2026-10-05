@@ -57,4 +57,33 @@ function findAvailableDriver() returns Driver|error? {
 
 # Sets a driver's status. If 'expected' is given only updates when the current status matches
 # (this is what stops two order grabbing the same driver). Retruns true if a driverwas updated.
-function uupdateDriverStatus(string driver)
+function uupdateDriverStatus(string driverId, DriverStatus newStatus, DriverStatus? expected = ())
+returns boolean|error {
+    mangodb:Collection drivers = check collection(DRIVERS);
+    map<json> filter = {driverId};
+    if expected is DriverStatus {
+        filter["status"] = expected;
+    }
+    mongodb:UpdateResult result = check drivers->updateOne(filter,
+        {set:{status: newStatus, updateAt: nowUtc()}});
+    return result.matchedCount > 0;
+}
+# Saves a driver's location. Returns false if the driver doesn't exist.
+function updateDriverLocation(string driverId, Location location) returns boolean|error {
+    mongodb:Collection drivers = check collection(DRIVERS);
+    mongodb:UpdateResult result = check drivers->updateOne({driverId},
+            {set: {location: {lat: location.lat, lng: location.lng}, updatedAt: nowUtc()}});
+    return result.matchedCount > 0;
+}
+
+//----deliveries----
+
+#Inserts a delivery (fails if the order already has one).
+function insertDelivery(Delivery delivery) returns error? {
+    mongodb:Collection deliveries = check collection(DELIVERIES);
+    mongodb:UpdateResult result = check deliveries->updateOne(
+        {orderId: delivery.orderId, status: expected},
+            {set: {status: delivery.status, pickedUpAt: delivery.pickedUpAt, deliveredAt: delivery.deliveredAt}});
+    return result.matchedCount > 0;
+}
+
