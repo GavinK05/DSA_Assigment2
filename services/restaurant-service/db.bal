@@ -106,3 +106,86 @@ public function updateHours(string restaurantId, OpeningHours[] openingHours) re
     return findRestaurant(restaurantId);
 }
 
+public function addMenuItem(string restaurantId, MenuItem menuItem) returns Restaurant|error {
+    Restaurant|error restaurantResult = findRestaurant(restaurantId);
+    if restaurantResult is error {
+        return restaurantResult;
+    }
+    Restaurant restaurant = restaurantResult;
+
+    foreach MenuItem existingItem in restaurant.menu {
+        if existingItem.itemId == menuItem.itemId {
+            return error("DUPLICATE");
+        }
+    }
+
+    restaurant.menu.push(menuItem);
+    return saveMenu(restaurantId, restaurant.menu);
+}
+
+public function updateMenuItem(string restaurantId, string itemId, MenuItem menuItem) returns Restaurant|error {
+    Restaurant|error restaurantResult = findRestaurant(restaurantId);
+    if restaurantResult is error {
+        return restaurantResult;
+    }
+    Restaurant restaurant = restaurantResult;
+    MenuItem[] updatedMenu = [];
+    boolean itemFound = false;
+
+    foreach MenuItem existingItem in restaurant.menu {
+        if existingItem.itemId == itemId {
+            updatedMenu.push(menuItem);
+            itemFound = true;
+        } else {
+            updatedMenu.push(existingItem);
+        }
+    }
+
+    if !itemFound {
+        return error("ITEM_NOT_FOUND");
+    }
+    return saveMenu(restaurantId, updatedMenu);
+}
+
+public function removeMenuItem(string restaurantId, string itemId) returns Restaurant|error {
+    Restaurant|error restaurantResult = findRestaurant(restaurantId);
+    if restaurantResult is error {
+        return restaurantResult;
+    }
+    Restaurant restaurant = restaurantResult;
+    MenuItem[] updatedMenu = [];
+    boolean itemFound = false;
+
+    foreach MenuItem existingItem in restaurant.menu {
+        if existingItem.itemId == itemId {
+            itemFound = true;
+        } else {
+            updatedMenu.push(existingItem);
+        }
+    }
+
+    if !itemFound {
+        return error("ITEM_NOT_FOUND");
+    }
+    return saveMenu(restaurantId, updatedMenu);
+}
+
+// this is the repeated MongoDB update part for all three menu operations.
+function saveMenu(string restaurantId, MenuItem[] menu) returns Restaurant|error {
+    if restaurantsCollection is () {
+        return error("Restaurant collection is not initialized");
+    }
+    mongodb:Collection collectionValue = <mongodb:Collection>restaurantsCollection;
+    mongodb:Update update = {set: {menu: menu}};
+    var updateResult = collectionValue->updateOne(
+        {restaurantId: restaurantId},
+        update,
+        {}
+    );
+
+    if updateResult is error {
+        return updateResult;
+    }
+    return findRestaurant(restaurantId);
+}
+

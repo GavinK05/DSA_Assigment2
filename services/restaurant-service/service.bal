@@ -140,4 +140,63 @@ service / on httpListener {
         response.setPayload(result);
         return response;
     }
+
+    resource function post restaurants/[string restaurantId]/menu(
+            @http:Payload MenuItem menuItem
+    ) returns http:Response {
+        error? validationResult = validateMenuItem(menuItem);
+        if validationResult is error {
+            return menuErrorResponse(400, "INVALID_REQUEST", validationResult.message());
+        }
+        Restaurant|error result = addMenuItem(restaurantId, menuItem);
+        return menuResultResponse(result, restaurantId, menuItem.itemId, 201);
+    }
+
+    resource function put restaurants/[string restaurantId]/menu/[string itemId](
+            @http:Payload MenuItem menuItem
+    ) returns http:Response {
+        error? validationResult = validateMenuItem(menuItem);
+        if validationResult is error {
+            return menuErrorResponse(400, "INVALID_REQUEST", validationResult.message());
+        }
+        if menuItem.itemId != itemId {
+            return menuErrorResponse(400, "INVALID_REQUEST", "The itemId in the body must match the URL");
+        }
+        Restaurant|error result = updateMenuItem(restaurantId, itemId, menuItem);
+        return menuResultResponse(result, restaurantId, itemId, 200);
+    }
+
+    resource function delete restaurants/[string restaurantId]/menu/[string itemId]() returns http:Response {
+        Restaurant|error result = removeMenuItem(restaurantId, itemId);
+        return menuResultResponse(result, restaurantId, itemId, 200);
+    }
+
+}
+
+// i use one response helper so all the menu routes return errors the same way.
+function menuResultResponse(Restaurant|error result, string restaurantId, string itemId, int successStatus) returns http:Response {
+    if result is error {
+        if result.message() == "NOT_FOUND" {
+            return menuErrorResponse(404, "NOT_FOUND", "Restaurant " + restaurantId + " does not exist");
+        }
+        if result.message() == "ITEM_NOT_FOUND" {
+            return menuErrorResponse(404, "NOT_FOUND", "Menu item " + itemId + " does not exist");
+        }
+        if result.message() == "DUPLICATE" {
+            return menuErrorResponse(409, "DUPLICATE", "Menu item " + itemId + " already exists");
+        }
+        return menuErrorResponse(500, "DATABASE_ERROR", result.message());
+    }
+
+    http:Response response = new;
+    response.statusCode = successStatus;
+    response.setPayload(result);
+    return response;
+}
+
+function menuErrorResponse(int statusCode, string errorCode, string message) returns http:Response {
+    http:Response response = new;
+    response.statusCode = statusCode;
+    response.setPayload(<ErrorResponse>{'error: errorCode, message: message});
+    return response;
 }

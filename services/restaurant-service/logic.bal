@@ -53,6 +53,21 @@ function validateRestaurant(RestaurantCreateRequest request) returns error? {
     }
 }
 
+// i just keep the menu checks here so all the menu routes use the same rules.
+// no negative prices or stock, and the name cannot just be blank.
+function validateMenuItem(MenuItem menuItem) returns error? {
+    if menuItem.name == "" {
+        return error("Menu item name is required");
+    }
+    decimal minimumMenuPrice = 0;
+    if menuItem.price < minimumMenuPrice {
+        return error("Menu item price cannot be negative");
+    }
+    if menuItem.stock < 0 {
+        return error("Menu item stock cannot be negative");
+    }
+}
+
 // a restaurant is open from its opening time up to, but not including, its closing time.
 // overnight hours are not supported, so a restaurant that opens at 10 PM and closes at 2 AM is considered closed at 1 AM.
 // we dont got those typa resturants out here yk
