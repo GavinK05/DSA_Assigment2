@@ -74,4 +74,5 @@ resource function get orders/[string orderId]/history()
                     return <http:NotFound>{body: {'error: "NOT_FOUND", message: "Order " + orderId + " does not exist"}};
                 }
                 return result.statusHistory;
-            } // note that Endpoint 2 returns the whole order and endpoint 5 returns just the timeline list inside it via return result.statusHistory.}
+            } // note that Endpoint 2 returns the whole order and endpoint 5 returns just the timeline list inside it via return result.statusHistory.
+}
