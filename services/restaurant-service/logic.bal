@@ -1,7 +1,9 @@
 import ballerina/time;
 import ballerina/uuid;
 
-// Validate the request, build the restaurant, and ask the database layer to save it.
+// ok this creates the univarsal unique id (uuid) for the restaurant
+// and adds the prefix RES- to it so we know its a restaurant id
+// then it creates the restaurant record and adds the current time to it
 public function createRestaurant(RestaurantCreateRequest request) returns Restaurant|error {
     check validateRestaurant(request);
 
@@ -19,7 +21,8 @@ public function createRestaurant(RestaurantCreateRequest request) returns Restau
     return insertRestaurant(restaurant);
 }
 
-// These checks belong here because they are business rules, not HTTP rules.
+// this just to check valididty so basic error handling so users dont add
+// invalid data like negative price or stock or invalid lat and lng
 function validateRestaurant(RestaurantCreateRequest request) returns error? {
     if request.name == "" {
         return error("Restaurant name is required");
