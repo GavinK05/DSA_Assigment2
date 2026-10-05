@@ -11,11 +11,58 @@ public enum Day {
 }
 
 public enum KitchenOrderStatus {
+    AWAITING_CONFIRMATION,
     CONFIRMED,
     PREPARING,
     READY,
-    REJECTED
+    REJECTED,
+    CANCELLED
 }
+
+public enum OrderStatus {
+    CREATED,
+    CONFIRMED,
+    PREPARING,
+    READY,
+    OUT_FOR_DELIVERY,
+    DELIVERED,
+    CANCELLED
+}
+
+public type DeliveryAddress record {|
+    string street;
+    string suburb;
+    string city;
+    float lat;
+    float lng;
+|};
+
+public type OrderCreatedData record {|
+    string customerId;
+    string restaurantId;
+    OrderItemRequest[] items;
+    DeliveryAddress deliveryAddress;
+|};
+
+public type OrderStatusChangedData record {|
+    string customerId;
+    string restaurantId;
+    OrderStatus fromStatus;
+    OrderStatus toStatus;
+    string reason;
+    decimal total;
+    DeliveryAddress deliveryAddress;
+|};
+
+public type KitchenOrderStatusUpdate record {|
+    RestaurantStatus status;
+|};
+
+public type ProcessedEvent record {|
+    string eventId;
+    string eventType;
+    string processedAt;
+|};
 
 // we use 'service cause service is a ballerina keyword so normal service wont work
 public type HealthResponse record {|
@@ -60,6 +107,42 @@ public type OrderValidationResult record {|
     KitchenOrderItem[] items;
     decimal total;
     string currency;
+|};
+
+public type EventEnvelope record {|
+    string eventId;
+    string eventType;
+    int version;
+    string occurredAt;
+    string 'source;
+    string orderId;
+    json data;
+|};
+
+public const REJECTED = "REJECTED";
+
+public type RestaurantStatus PREPARING|READY|REJECTED;
+
+public type PricedItem record {|
+    string itemId;
+    string name;
+    int quantity;
+    decimal unitPrice;
+|};
+
+public type OrderValidatedData record {|
+    string restaurantId;
+    string customerId;
+    PricedItem[] items;
+    decimal total;
+    string currency;
+    string reason;
+    boolean accepted;
+|};
+
+public type RestaurantOrderUpdatedData record {|
+    string restaurantId;
+    RestaurantStatus status;
 |};
 
 // ok quick explainer cause this lwk confusing

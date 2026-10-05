@@ -1,3 +1,4 @@
 kafkaBootstrap = "kafka:29092"
 mongoUrl = "mongodb://mongo:27017"
 port = 8082
+restaurantTimeZone = "Africa/Windhoek"
