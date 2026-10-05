@@ -63,6 +63,22 @@ public type Restaurant record {|
     string createdAt;
 |};
 
+// This is the info the client sends when registering a restaurant.
+public type RestaurantCreateRequest record {|
+    string name;
+    string cuisine;
+    RestaurantAddress address;
+    OpeningHours[] openingHours;
+    MenuItem[] menu;
+|};
+
+// error handling cause bal doesnt have try except handling mxm
+// so we use this to return an error if smth goes wrong
+public type ErrorResponse record {|
+    string 'error;
+    string message;
+|};
+
 public type KitchenOrderItem record {|
     string itemId;
     string name;
