@@ -38,3 +38,30 @@ function saveProcessedEvent(ProcessedEvent event) returns error? {
     mongodb:Collection col = check processedEventsCol();
     check col->insertOne(event);
 }
+
+function findPayments(string? orderId, string? customerId)
+        returns Payment[]|error {
+
+    mongodb:Collection col = check paymentsCol();
+
+    map<json> filter = {};
+
+    if orderId is string {
+        filter["orderId"] = orderId;
+    }
+
+    if customerId is string {
+        filter["customerId"] = customerId;
+    }
+
+    stream<Payment, error?> paymentStream =
+        check col->find(filter, targetType = Payment);
+
+    Payment[] payments =
+        check from Payment payment in paymentStream
+        select payment;
+
+    check paymentStream.close();
+
+    return payments;
+}
