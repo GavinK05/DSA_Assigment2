@@ -93,3 +93,38 @@ public type PaymentCompletedData record {|
     string currency;
     string method; // how the customer paid, e.g. "CARD"
 |};
+
+# Data for the payments.failed event.
+public type PaymentFailedData record {|
+    string paymentId;
+    string customerId;
+    string reason; // why the payment failed, e.g. "CARD_DECLINED"
+    decimal amount;
+|};
+
+# Data for the delivery.assigned event.
+public type DeliveryAssignedData record {|
+    string driverName;
+    string driverId;
+    string customerId;
+    string restaurantId;
+    string deliveryId;
+|};
+
+# Data for the delivery.picked-up event.
+public type DeliveryPickedUpData record {|
+    string deliveryId;
+    string driverId;
+    string customerId;
+    string pickedUpAt; // when the driver collected the order (ISO timestamp)
+|};
+
+# Data for the delivery.completed event.
+public type DeliveryCompletedData record {|
+    string deliveryId;
+    string driverId;
+    string customerId;
+    string restaurantId;
+    string deliveredAt; // when the order was delivered (ISO timestamp)
+    int durationMinutes;
+|};
